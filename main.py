@@ -109,6 +109,8 @@ class WordSetup:
         print(coordinates_list)
 
     def word_overlap():
+        '''make sure that each target word does not overlap
+        more than one letter with another target word''' 
         pass
 
 class GameBoard:
