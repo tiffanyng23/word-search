@@ -9,40 +9,40 @@ screen = pygame.display.set_mode((600, 600))
 pygame.display.set_caption("Word Search")
 clock = pygame.time.Clock()
 
-# variables
+# game board variables
 letter_font = pygame.font.Font(None, 36)
 left_margin = 150
 top_margin = 150
 box_width = 150
 box_height = 150
 
+# game logic variables
+MIN_WORD_SIZE = 4
+WORD_COUNT = 10
+BOARD_SIZE = 15
+
 # classes
 class WordSetup: 
-    '''generate game board with randomnly generated word correctly integrated into the board'''
-    def __init__(self, board_size):
+    '''generate random word and determine coordinates on the board'''
+    def __init__(self, board_size, word_count):
         self.board_size = board_size
-
-        # generate random word
-        self.word = self.render_word()
-
-        # list of target words, create this since I eventually want to loop through multiple words
         self.word_list = []
-        
-        #word gets adjusted to random orientation and added to the word list
-        self.adjusted_word = self.word_orientation(self.word)
-
-        # list of coordinates for target words
         self.coordinates_list = []
 
-        # take the adjusted word and determine position of word on the board
-        self.word_position(self.adjusted_word, self.coordinates_list)
-
+        for i in range(word_count):
+            # generate random word
+            self.word = self.render_word()
+            #word gets adjusted to random orientation and added to the word list
+            self.word_orientation(self.word)
+        
+        # take the completed target word list and determine position of eachword on the board
+        self.word_position(self.word_list, self.coordinates_list)
 
     def render_word(self):
         '''generate random word'''
         r = RandomWord()
         # make sure word is not longer than the width/height of game board
-        target_word = r.word(word_min_length=4, word_max_length= self.board_size).upper()
+        target_word = r.word(word_min_length= MIN_WORD_SIZE, word_max_length= self.board_size).upper()
         return target_word
 
     def word_orientation(self, word):
@@ -60,58 +60,75 @@ class WordSetup:
         return word
 
 
-    def word_position(self, adjusted_word, coordinates_list):
-        # randomnly pick a row/col in the gameboard to insert the word
-        # make sure word fits within boundaries of board
-        random_word_dir = ["horizontal", "vertical", "down_diagonal", "up_diagonal"]
-        word_dir = random.choice(random_word_dir) 
+    def word_position(self, word_list, coordinates_list):
+        for adjusted_word in word_list:
+            placed_word = False
+            # if word has not been placed in coordinates list keep looping
+            while not placed_word:
+                random_word_dir = ["horizontal", "vertical", "down_diagonal", "up_diagonal"]
+                word_length = len(adjusted_word)
+                word_coords = {}
 
-        # get word length
-        word_length = len(adjusted_word)
+                # generate a direction for the word
+                word_dir = random.choice(random_word_dir) 
 
-        # store coordinates for each letter
-        word_coords = {}
-        
-        if word_dir == "horizontal":
-            # e.g. a 10 letter word cannot start past index 6 in a 16 column board (index 6 - index 15)
-            row = random.randint(0, self.board_size - 1)
-            col = random.randint(0, self.board_size - word_length)
+                if word_dir == "horizontal":
+                    # e.g. a 10 letter word cannot start past index 6 in a 16 column board (index 6 - index 15)
+                    row = random.randint(0, self.board_size - 1)
+                    col = random.randint(0, self.board_size - word_length)
 
-            # keep same row, column increase by 1 until the end of the word
-            for n, letter in enumerate(adjusted_word):
-                word_coords[(row, col + n)] = letter
-           
-        elif word_dir == "vertical":
-            row = random.randint(0, self.board_size - word_length)
-            col = random.randint(0, self.board_size - 1)
+                    # keep same row, column increase by 1 until the end of the word
+                    # map each letter in the word to coordinates here
+                    for n, letter in enumerate(adjusted_word):
+                        word_coords[(row, col + n)] = letter
+                elif word_dir == "vertical":
+                    row = random.randint(0, self.board_size - word_length)
+                    col = random.randint(0, self.board_size - 1)
 
-            # keep same col, increase row index by 1
-            for n, letter in enumerate(adjusted_word):
-                word_coords[(row + n, col)] = letter
+                    # keep same col, increase row index by 1
+                    for n, letter in enumerate(adjusted_word):
+                        word_coords[(row + n, col)] = letter
+                elif word_dir == "down_diagonal":
+                    #diagonal - determine starting coordinates
+                    row = random.randint(0, self.board_size - word_length)
+                    col = random.randint(0, self.board_size - word_length)
 
-        elif word_dir == "down_diagonal":
-            #diagonal - determine starting coordinates
-            row = random.randint(0, self.board_size - word_length)
-            col = random.randint(0, self.board_size - word_length)
+                    for n, letter in enumerate(adjusted_word):
+                        word_coords[(row + n, col + n)] = letter
+                else:
+                    # up diagonal
+                    row = random.randint(word_length - 1, self.board_size - 1)
+                    col = random.randint(0, self.board_size - word_length)
 
-            for n, letter in enumerate(adjusted_word):
-                word_coords[(row + n, col + n)] = letter
-        else:
-            # up diagonal
-            row = random.randint(word_length - 1, self.board_size - 1)
-            col = random.randint(0, self.board_size - word_length)
+                    for n, letter in enumerate(adjusted_word):
+                        word_coords[(row - n, col + n)] = letter
 
-            for n, letter in enumerate(adjusted_word):
-                word_coords[(row - n, col + n)] = letter
-
-        # add entry to word list
-        coordinates_list.append({adjusted_word : word_coords})
+                # validation check
+                valid_placement = True
+                if len(coordinates_list) >= 1:
+                    for mapped_word in coordinates_list:
+                        overlaps = list(mapped_word.keys() & word_coords.keys())
+                        overlap_count = len(overlaps)
+                        # more than one set of coordinates overlap between prospective coordinates of a word
+                        # and already set coordinates of another word
+                        if overlap_count > 1:
+                            valid_placement = False
+                            break
+                        # check if overlap letter matches
+                        if overlap_count == 1:
+                            overlap_coords = overlaps[0]
+                            if mapped_word[overlap_coords] != word_coords[overlap_coords]:
+                                valid_placement = False
+                                break
+                
+                # pass validation check - add entry to coordinates list
+                # fail validation check --> valid_placement = False and placed_word = False
+                if valid_placement == True:  
+                    coordinates_list.append(word_coords)
+                    # break out of while loop and move to next word
+                    placed_word = True
+            
         print(coordinates_list)
-
-    def word_overlap():
-        '''make sure that each target word does not overlap
-        more than one letter with another target word''' 
-        pass
 
 class GameBoard:
     '''generate game board with the target words'''
@@ -131,21 +148,18 @@ class GameBoard:
         for row in range(0, self.board_size):
             for col in range(0, self.board_size):
                 box_coords = (row, col)
-                #check each box to see if a letter from a target word should be in there or not
-                # extract each target word dictionary mapping the coordinates to each letter in the word
-                for coordinates,word in zip(coordinates_list, word_list):
-                    assess_coords = coordinates[word]
-                    # check if box_coords matches any coords (key) in assess_coords
+                #check each box to see if any letter from any of the target words should be there
+                for assess_coords in coordinates_list:
+                    # check if box coordinates matches any coordinates in assess coordinates
                     if box_coords in assess_coords:
                         #remove key:value from assess_coords dictionary and break
                         box_letter = assess_coords.pop(box_coords)
-                        # add the coords: letter pair to the board_letters dictionary
+                        # add the box coordinates: letter pair to the board_letters dictionary
                         board_letters[box_coords] = box_letter
                         break
                     else:
                         # generate random letter for the box
                         box_letter = random.choice(string.ascii_uppercase)
-                        
                         # need to store the letter with the respective box coordinate
                         board_letters[box_coords] = box_letter
         return board_letters
@@ -164,36 +178,42 @@ class GameBoard:
                 center_y = (10 + 30 * row) + box_height/2
                 letter_rect = letter_surface.get_rect(center=(center_x, center_y))
                 screen.blit(letter_surface, letter_rect)
-                
-            
-class GameScore:
-    pass
+    
+    def guess_word():
+        '''allow user to tap on a letter to build a guess'''
+        pass               
 
 
 running = True
-found_word = False
+win_status = False
 
-# Setup game components once here to prevent new words/boards being rapidly generated
-game = WordSetup(15)
+# Setup game components once here to prevent new words/boards being rendered each frame
+#generate words and coordinates of words
+game = WordSetup(BOARD_SIZE, WORD_COUNT)
+# extract coordinates of target words
 coordinates_list = game.coordinates_list
+# extract target words
 word_list = game.word_list
-board = GameBoard(15, coordinates_list, word_list)
+print(word_list)
+# generate random letters for coordinates without the target word
+board = GameBoard(BOARD_SIZE, coordinates_list, word_list)
+# extract the letters for each coordinate
 board_letters = board.board_letters
 
 while running:
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
+    # events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    if found_word == False:
+    # render game
+    if win_status == False:
         # fill the screen with a color to wipe away anything from last frame
         screen.fill("pink")
+        # render game board with letters
         board.render_board(board_letters)
     
     pygame.display.flip()
-
-    clock.tick(60)  # limits FPS to 60
+    clock.tick(60)
 
 pygame.quit()
