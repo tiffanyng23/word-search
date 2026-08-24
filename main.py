@@ -61,7 +61,7 @@ class WordSetup:
 
 
     def word_position(self, word_list, coordinates_list):
-        for adjusted_word in word_list:
+        for n, adjusted_word in enumerate(word_list):
             placed_word = False
             # if word has not been placed in coordinates list keep looping
             while not placed_word:
@@ -104,31 +104,57 @@ class WordSetup:
                         word_coords[(row - n, col + n)] = letter
 
                 # validation check
-                valid_placement = True
-                if len(coordinates_list) >= 1:
-                    for mapped_word in coordinates_list:
-                        overlaps = list(mapped_word.keys() & word_coords.keys())
-                        overlap_count = len(overlaps)
-                        # more than one set of coordinates overlap between prospective coordinates of a word
-                        # and already set coordinates of another word
-                        if overlap_count > 1:
-                            valid_placement = False
-                            break
-                        # check if overlap letter matches
-                        if overlap_count == 1:
-                            overlap_coords = overlaps[0]
-                            if mapped_word[overlap_coords] != word_coords[overlap_coords]:
-                                valid_placement = False
-                                break
+                valid_placement = self.validation_check(word_coords, coordinates_list)
                 
                 # pass validation check - add entry to coordinates list
-                # fail validation check --> valid_placement = False and placed_word = False
                 if valid_placement == True:  
                     coordinates_list.append(word_coords)
                     # break out of while loop and move to next word
                     placed_word = True
             
         print(coordinates_list)
+    def word_intersection(self, current_word, last_mapped_word, coordinates_list):
+        '''determine whether current word has any matching letters with previously mapped word'''
+        last_mapped_word = coordinates_list[-1]
+        candidate_intersections = []
+
+        # check for any matching letters between the current word and previous word
+        # identify the coordinates of the matching letter in the previously mapped word
+        for last_coord, last_letter in last_mapped_word.items():
+            for new_index, new_letter in enumerate(current_word):
+                if last_letter == new_letter:
+                    candidate_intersections.append((last_coord, new_index))
+
+        # Randomnly select an interesection to use
+        random.choice(candidate_intersections)
+
+        # create tentative coordinates for the current_word
+        # generate direction of word
+        # map out coordinates
+
+        return coordinates
+
+    def validation_check(self, word_coords, coordinates_list):
+        '''check if prospective coordinates for the word are valid'''
+        valid_placement = True
+        
+        if len(coordinates_list) >= 1:
+            for mapped_word in coordinates_list:
+                overlaps = list(mapped_word.keys() & word_coords.keys())
+                overlap_count = len(overlaps)
+                # more than one set of coordinates overlap between prospective coordinates of a word
+                # and already set coordinates of another word
+                if overlap_count > 1:
+                    valid_placement = False
+                    break
+                # check if overlap letter matches
+                if overlap_count == 1:
+                    overlap_coords = overlaps[0]
+                    if mapped_word[overlap_coords] != word_coords[overlap_coords]:
+                        valid_placement = False
+                        break
+                        
+        return valid_placement
 
 class GameBoard:
     '''generate game board with the target words'''
