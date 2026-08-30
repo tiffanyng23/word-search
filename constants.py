@@ -14,6 +14,6 @@ GREEN = 136, 186, 149
 
 # game logic variables
 MIN_WORD_SIZE = 4
-WORD_COUNT = 5
+WORD_COUNT = 10
 BOARD_SIZE = 15
 WIN_MSG = "You have solved the word search!"
